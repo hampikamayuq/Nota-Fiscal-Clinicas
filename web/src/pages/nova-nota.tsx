@@ -69,7 +69,7 @@ export function NovaNota() {
 
   return (
     <>
-      <PageHeader titulo="Para quem é a nota?" descricao="Escolha a empresa primeiro; os médicos atendem pelas duas." />
+      <PageHeader titulo="Para quem é a nota?" descricao="Empresa, paciente, profissional e serviços. A nota se monta ao lado." />
       <div className="grid gap-8 xl:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
         <div className="grid gap-8">
           <Passo n={1} titulo="Empresa emissora">

@@ -37,7 +37,7 @@ export function Servicos() {
     <>
       <PageHeader
         titulo="Serviços"
-        descricao="Um catálogo só para as duas empresas. Um serviço só entra em nota da empresa em que está disponível."
+        descricao="Um catálogo só para todas as empresas da clínica. Um serviço só entra em nota da empresa em que está disponível."
         acoes={
           podeEditar && (
             <Button onClick={() => setDialogo({ tipo: 'servico', servico: null })}>
@@ -175,7 +175,7 @@ function ServicoDialog({ servico, completo, onFechar }: { servico: Servico | nul
         <DialogHeader>
           <DialogTitle>{servico ? 'Editar serviço' : 'Novo serviço'}</DialogTitle>
           <DialogDescription>
-            Vale para as duas empresas. Mudar aqui não altera notas já criadas.
+            Vale para todas as empresas. Mudar aqui não altera notas já criadas.
             {!completo && !servico && ' Um serviço novo só entra em nota depois que o financeiro o libera em cada empresa.'}
           </DialogDescription>
         </DialogHeader>

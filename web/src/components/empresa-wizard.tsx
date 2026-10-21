@@ -303,7 +303,7 @@ export function EmpresaWizard({ empresa, emissora, onFechar }: Props) {
                 <Radios nome="Retenção do ISSQN" opcoes={RETENCAO} valor={f.retencaoIssqn} onChange={(v) => set({ retencaoIssqn: v })} />
               </Campo>
               <Campo id="e-iss" label="Alíquota de ISS destacada (%) — opcional" dica={simples ? 'Optante do Simples sem retenção costuma deixar em branco: o fisco recusa alíquota (E0625).' : 'Ex.: 5,00. Sociedade de profissionais com ISS fixo deixa em branco.'}>
-                <Input id="e-iss" inputMode="decimal" className="tabular max-w-32" placeholder="5,00" value={f.aliquotaIss} onChange={(ev) => set({ aliquotaIss: ev.target.value })} />
+                <Input id="e-iss" inputMode="decimal" className="tabular max-w-32" placeholder={simples ? '' : '5,00'} value={f.aliquotaIss} onChange={(ev) => set({ aliquotaIss: ev.target.value })} />
               </Campo>
             </>
           )}
