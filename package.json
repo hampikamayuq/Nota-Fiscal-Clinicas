@@ -1,0 +1,49 @@
+{
+  "name": "clinica-fiscal",
+  "version": "0.2.0",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "description": "Clínica Fiscal — emissão de NFS-e (padrão nacional, via Focus NFe) para clínicas de saúde",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "prebuild": "prisma generate",
+    "mcp": "node --experimental-strip-types --no-warnings src/mcp/main.ts",
+    "build": "tsc -p tsconfig.json",
+    "pretypecheck": "prisma generate",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pretest": "prisma generate",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepare": "prisma generate",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "db:clinica": "node --experimental-strip-types --no-warnings prisma/clinica.ts",
+    "api": "node --experimental-strip-types --no-warnings src/api/main.ts",
+    "web": "npm --prefix web run dev",
+    "web:build": "npm --prefix web run build",
+    "web:test": "npm --prefix web test"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.1.2",
+    "@fastify/static": "^10.1.5",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.10.1",
+    "argon2": "^0.45.1",
+    "fastify": "^5.12.7",
+    "pg": "^8.23.1",
+    "prisma": "^7.10.1",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.21",
+    "@types/pg": "^8.23.1",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}

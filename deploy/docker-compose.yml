@@ -1,0 +1,63 @@
+# Clínica Fiscal num VPS que JÁ TEM um Traefik (rede externa com certificados
+# Let's Encrypt), com PostgreSQL próprio numa rede interna. Num VPS vazio, use
+# o docker-compose.vps.yml (Caddy faz o HTTPS); no computador da clínica, o
+# docker-compose.local.yml. Uso (no VPS, na pasta do projeto):
+#   docker compose -f deploy/docker-compose.yml --env-file .env.production up -d --build
+# Tudo que identifica a instalação vem de .env.production (ver docs/deploy.md):
+#   COMPOSE_PROJECT_NAME, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, FISCAL_HOST, PROXY_NETWORK.
+# Mudar COMPOSE_PROJECT_NAME, POSTGRES_USER ou POSTGRES_DB numa instalação
+# existente aponta para outro volume/banco: parece "perder" os dados.
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?defina POSTGRES_USER em .env.production}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD em .env.production}
+      POSTGRES_DB: ${POSTGRES_DB:?defina POSTGRES_DB em .env.production}
+    volumes:
+      - db:/var/lib/postgresql
+    networks: [interna]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: ..
+    restart: unless-stopped
+    env_file: ../.env.production
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      API_COOKIE_SECURE: sim
+      # Só o Traefik alcança a porta 3100 (não é publicada no host).
+      API_TRUST_PROXY: "true"
+    volumes:
+      # config.json de cada empresa e cadastro.json (códigos do contador). Somente leitura.
+      - ../empresas:/app/empresas:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [interna, proxy]
+    labels:
+      # O nome do projeto é obrigatório: sem ele o compose usaria "deploy" e criaria outro volume.
+      br.com.clinica-fiscal.instalacao: ${COMPOSE_PROJECT_NAME:?defina COMPOSE_PROJECT_NAME em .env.production}
+      traefik.enable: "true"
+      traefik.docker.network: ${PROXY_NETWORK:?defina PROXY_NETWORK em .env.production}
+      # Uma instalação por Traefik; para duas no mesmo servidor, renomeie o router "fiscal" aqui.
+      traefik.http.routers.fiscal.rule: Host(`${FISCAL_HOST:?defina FISCAL_HOST em .env.production}`)
+      traefik.http.routers.fiscal.entrypoints: websecure
+      traefik.http.routers.fiscal.tls.certresolver: le
+      traefik.http.services.fiscal.loadbalancer.server.port: "3100"
+
+networks:
+  interna: {}
+  proxy:
+    external: true
+    name: ${PROXY_NETWORK}
+
+volumes:
+  db: {}

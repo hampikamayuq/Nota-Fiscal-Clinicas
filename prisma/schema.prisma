@@ -1,0 +1,447 @@
+// Domínio administrativo do Clínica Fiscal (PostgreSQL + Prisma).
+//
+// Este schema é o cadastro operacional: quem emite, para quem, por qual
+// profissional, com quais serviços. Valores sempre em centavos (Int).
+
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  runtime                = "nodejs"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  RECEPTION
+  FINANCE
+  AUDITOR
+}
+
+enum PatientType {
+  INDIVIDUAL
+  COMPANY
+  FOREIGN
+  UNIDENTIFIED
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  name         String
+  role         UserRole
+  /// Argon2id. Nulo até a fase de autenticação; nunca sai do backend.
+  passwordHash String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  invoicesCreated Invoice[]
+  apiTokens       ApiToken[]
+}
+
+model Company {
+  id                String   @id @default(uuid()) @db.Uuid
+  /// Nome da pasta em empresas/<slug>: liga a empresa ao config.json do
+  /// contador e ao token da Focus (FOCUS_TOKEN_<AMBIENTE>_<SLUG>).
+  slug              String   @unique
+  legalName         String
+  tradeName         String?
+  cnpj              String   @unique
+  /// Produção só com esta trava E as travas de ambiente (ver plano, §39).
+  productionEnabled Boolean  @default(false)
+  /// Dados da emissora para a DPS (município, regime, códigos, PIS/COFINS,
+  /// IBS/CBS, carga tributária), no formato de ConfigFiscalSchema (src/config.ts).
+  /// Vem do assistente "Nova empresa" ou de empresas/<slug>/config.json.
+  fiscalConfigJson  Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  fiscalConfigs CompanyServiceFiscalConfig[]
+
+  invoices      Invoice[]
+  fiscalDefault CompanyFiscalDefault?
+}
+
+model Patient {
+  id               String      @id @default(uuid()) @db.Uuid
+  type             PatientType
+  name             String
+  cpf              String?     @unique
+  cnpj             String?     @unique
+  foreignDocument  String?
+  email            String?
+  phone            String?
+  postalCode       String?
+  street           String?
+  number           String?
+  complement       String?
+  district         String?
+  city             String?
+  state            String?
+  /// Código IBGE do município (7 dígitos), vindo da consulta do CEP. Sem ele o endereço não vai na nota.
+  municipalityCode String?
+  countryCode      String      @default("BR")
+  active           Boolean     @default(true)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  invoices Invoice[]
+
+  @@index([name])
+}
+
+model Professional {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  cpf       String?  @unique
+  /// Sigla do conselho (CRM, CRO, CRP, CREFITO…). Na nota: "<council>-<crmState> <crmNumber>".
+  council   String   @default("CRM")
+  /// Número do registro no conselho (o nome da coluna é histórico; vale para qualquer conselho).
+  crmNumber String
+  crmState  String
+  specialty String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rqes ProfessionalRQE[]
+
+  invoices Invoice[]
+
+  @@unique([council, crmNumber, crmState])
+}
+
+model ProfessionalRQE {
+  id             String       @id @default(uuid()) @db.Uuid
+  professionalId String       @db.Uuid
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  number         String
+  specialty      String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([professionalId, number])
+}
+
+/// Catálogo compartilhado por todas as empresas da clínica. O que é tributário fica em
+/// CompanyServiceFiscalConfig, por empresa.
+model ServiceTemplate {
+  id                   String   @id @default(uuid()) @db.Uuid
+  name                 String
+  defaultDescription   String
+  tussCode             String?
+  tussVersion          String?
+  defaultAmountCents   Int
+  allowDescriptionEdit Boolean  @default(true)
+  allowAmountEdit      Boolean  @default(true)
+  favorite             Boolean  @default(false)
+  active               Boolean  @default(true)
+  category             String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  fiscalConfigs CompanyServiceFiscalConfig[]
+
+  invoiceItems  InvoiceItem[]
+  templateItems InvoiceTemplateItem[]
+
+  @@index([favorite, active])
+}
+
+/// Configuração fiscal padrão da empresa: vale para todo serviço do catálogo
+/// que não tenha uma configuração própria nesta empresa. Os códigos vêm do
+/// contador, como nas configurações por serviço.
+model CompanyFiscalDefault {
+  id                         String   @id @default(uuid()) @db.Uuid
+  companyId                  String   @unique @db.Uuid
+  company                    Company  @relation(fields: [companyId], references: [id])
+  nationalTaxCode            String
+  municipalTaxCode           String?
+  nbsCode                    String?
+  issRate                    Decimal? @db.Decimal(5, 2)
+  taxationType               String
+  issWithholdingType         String
+  pisCofinsConfigJson        Json?
+  ibsCbsConfigJson           Json?
+  additionalFiscalConfigJson Json?
+  active                     Boolean  @default(true)
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+}
+
+/// Exceção de um serviço numa empresa (sobrepõe o padrão). Inativa = o serviço
+/// fica indisponível nesta empresa mesmo havendo padrão.
+/// Códigos tributários de um serviço numa empresa. Os códigos são os do
+/// padrão nacional (cTribNac, cTribMun, NBS, tribISSQN, tpRetISSQN) e vêm do
+/// contador — o código não inventa nenhum.
+model CompanyServiceFiscalConfig {
+  id                         String          @id @default(uuid()) @db.Uuid
+  companyId                  String          @db.Uuid
+  company                    Company         @relation(fields: [companyId], references: [id])
+  serviceTemplateId          String          @db.Uuid
+  serviceTemplate            ServiceTemplate @relation(fields: [serviceTemplateId], references: [id])
+  nationalTaxCode            String
+  municipalTaxCode           String?
+  nbsCode                    String?
+  issRate                    Decimal?        @db.Decimal(5, 2)
+  taxationType               String
+  issWithholdingType         String
+  pisCofinsConfigJson        Json?
+  ibsCbsConfigJson           Json?
+  additionalFiscalConfigJson Json?
+  active                     Boolean         @default(true)
+  createdAt                  DateTime        @default(now())
+  updatedAt                  DateTime        @updatedAt
+
+  @@unique([companyId, serviceTemplateId])
+}
+
+// ─── Notas (Fase 3) ──────────────────────────────────────────────────────────
+
+enum InvoiceStatus {
+  DRAFT
+  READY
+  SUBMITTING
+  PROCESSING
+  AUTHORIZED
+  REJECTED
+  CANCELLATION_REQUESTED
+  CANCELLED
+  CANCELLATION_ERROR
+}
+
+enum PaymentMethod {
+  PIX
+  CREDIT_CARD
+  DEBIT_CARD
+  TRANSFER
+  CASH
+  HEALTH_PLAN
+}
+
+/// Como a nota foi paga. Não é dado fiscal: muda em qualquer situação da nota.
+model InvoicePayment {
+  id          String        @id @default(uuid()) @db.Uuid
+  invoiceId   String        @db.Uuid
+  invoice     Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  method      PaymentMethod
+  amountCents Int
+  sortOrder   Int           @default(0)
+  createdAt   DateTime      @default(now())
+
+  @@index([invoiceId])
+}
+
+/// Token de acesso para o MCP. Só o SHA-256 fica no banco; o valor em claro sai uma vez na CLI.
+model ApiToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  user       User      @relation(fields: [userId], references: [id])
+  name       String
+  tokenHash  String    @unique
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+enum FiscalAttemptOutcome {
+  STARTED
+  AUTHORIZED
+  PROCESSING
+  REJECTED
+  UNKNOWN
+}
+
+/// A nota. Tudo que vai para o fisco é snapshot: profissional, itens e
+/// configuração fiscal são copiados na hora e nunca seguem o cadastro.
+/// Fora de DRAFT/READY, triggers no banco (migration harden_invoice_domain)
+/// recusam alterar dados fiscais, mexer em itens ou excluir a nota.
+model Invoice {
+  id              String        @id @default(uuid()) @db.Uuid
+  companyId       String        @db.Uuid
+  company         Company       @relation(fields: [companyId], references: [id])
+  patientId       String        @db.Uuid
+  patient         Patient       @relation(fields: [patientId], references: [id])
+  professionalId  String        @db.Uuid
+  professional    Professional  @relation(fields: [professionalId], references: [id])
+  createdByUserId String?       @db.Uuid
+  createdBy       User?         @relation(fields: [createdByUserId], references: [id])
+  status          InvoiceStatus @default(DRAFT)
+
+  /// Referência do sistema de origem (ex.: id do agendamento). Única por empresa.
+  internalReference String?
+  /// 'fake' | 'focus'. Nulo até a primeira tentativa de emissão.
+  provider          String?
+  /// Referência enviada ao provedor; determinística e única por empresa.
+  providerReference String?
+  providerStatus    String?
+
+  professionalNameSnapshot      String
+  professionalCouncilSnapshot   String        @default("CRM")
+  professionalCrmSnapshot       String
+  professionalCrmStateSnapshot  String
+  professionalRqeSnapshot       String?
+  professionalSpecialtySnapshot String?
+
+  /// Sempre SUM(items.totalAmountCents); nunca editado à mão.
+  totalAmountCents       Int     @default(0)
+  finalFiscalDescription String?
+
+  externalNumber           String?
+  externalVerificationCode String?
+  pdfUrl                   String?
+  xmlUrl                   String?
+
+  competenceDate DateTime? @db.Date
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  submittedAt    DateTime?
+  authorizedAt   DateTime?
+  cancelledAt    DateTime?
+
+  lastErrorCode    String?
+  lastErrorMessage String?
+
+  items    InvoiceItem[]
+  payments InvoicePayment[]
+  history  InvoiceStatusHistory[]
+  attempts FiscalAttempt[]
+
+  @@unique([companyId, providerReference])
+  @@unique([companyId, internalReference])
+  @@index([companyId, status])
+  @@index([patientId])
+  @@index([professionalId])
+  @@index([createdByUserId])
+  /// O webhook procura a nota só pela referência do provedor.
+  @@index([providerReference])
+}
+
+model InvoiceItem {
+  id                String           @id @default(uuid()) @db.Uuid
+  invoiceId         String           @db.Uuid
+  invoice           Invoice          @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  serviceTemplateId String?          @db.Uuid
+  serviceTemplate   ServiceTemplate? @relation(fields: [serviceTemplateId], references: [id], onDelete: Restrict)
+
+  serviceNameSnapshot String
+  descriptionSnapshot String
+  tussCodeSnapshot    String?
+  tussVersionSnapshot String?
+
+  quantity         Int @default(1)
+  unitAmountCents  Int
+  /// quantity * unitAmountCents, calculado pelo serviço.
+  totalAmountCents Int
+
+  fiscalConfigSnapshotJson Json?
+  sortOrder                Int
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@unique([invoiceId, sortOrder])
+  @@index([invoiceId])
+}
+
+model InvoiceStatusHistory {
+  id         String         @id @default(uuid()) @db.Uuid
+  invoiceId  String         @db.Uuid
+  invoice    Invoice        @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  fromStatus InvoiceStatus?
+  toStatus   InvoiceStatus
+  reason     String?
+  userId     String?        @db.Uuid
+  createdAt  DateTime       @default(now())
+
+  @@index([invoiceId])
+}
+
+/// Cada ida ao provedor fiscal, com o que foi enviado e o que voltou.
+model FiscalAttempt {
+  id                String               @id @default(uuid()) @db.Uuid
+  invoiceId         String               @db.Uuid
+  invoice           Invoice              @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  provider          String
+  providerReference String
+  outcome           FiscalAttemptOutcome @default(STARTED)
+  requestJson       Json?
+  responseJson      Json?
+  errorCode         String?
+  errorMessage      String?
+  startedAt         DateTime             @default(now())
+  finishedAt        DateTime?
+
+  @@index([invoiceId])
+}
+
+/// Sem chave estrangeira de propósito: auditoria sobrevive a qualquer exclusão.
+model AuditLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String?  @db.Uuid
+  action       String
+  entityType   String
+  entityId     String?
+  companyId    String?  @db.Uuid
+  ipAddress    String?
+  userAgent    String?
+  metadataJson Json?
+  createdAt    DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+/// Entrega de webhook do provedor. (provider, payloadHash) único = reentrega
+/// duplicada não processa duas vezes.
+model WebhookEvent {
+  id                String    @id @default(uuid()) @db.Uuid
+  provider          String
+  eventType         String
+  companyId         String?   @db.Uuid
+  invoiceId         String?   @db.Uuid
+  providerReference String?
+  payloadJson       Json
+  payloadHash       String
+  processedAt       DateTime?
+  processingError   String?
+  createdAt         DateTime  @default(now())
+
+  @@unique([provider, payloadHash])
+  @@index([providerReference])
+}
+
+// ─── Modelos de nota (Fase 6) ────────────────────────────────────────────────
+
+/// Combinação pronta de serviços ("Consulta + biópsia"). Aplicar copia os itens
+/// para a nota; depois disso eles são da nota e seguem editáveis.
+model InvoiceTemplate {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  favorite  Boolean  @default(false)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items InvoiceTemplateItem[]
+}
+
+model InvoiceTemplateItem {
+  id                String          @id @default(uuid()) @db.Uuid
+  templateId        String          @db.Uuid
+  template          InvoiceTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  serviceTemplateId String          @db.Uuid
+  serviceTemplate   ServiceTemplate @relation(fields: [serviceTemplateId], references: [id])
+  quantity          Int             @default(1)
+  /// Nulo = usa o valor padrão do serviço no momento de aplicar.
+  unitAmountCents   Int?
+  sortOrder         Int
+
+  @@unique([templateId, sortOrder])
+}

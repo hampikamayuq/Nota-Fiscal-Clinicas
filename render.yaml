@@ -1,0 +1,41 @@
+# Render (render.com): um serviço web a partir do Dockerfile + PostgreSQL gerenciado.
+# No painel: New → Blueprint → este repositório. Depois preencha, em Environment,
+# as variáveis marcadas `sync: false` (CLINIC_NAME e os tokens da Focus).
+# As migrações rodam quando o serviço sobe; empresas entram pelo assistente da
+# tela Empresas (o disco do Render não é persistente, então nada fica em empresas/).
+services:
+  - type: web
+    name: clinica-fiscal
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: clinica-fiscal-db
+          property: connectionString
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: FOCUS_WEBHOOK_SECRET
+        generateValue: true
+      - key: API_TRUST_PROXY
+        value: "true"
+      - key: API_COOKIE_SECURE
+        value: sim
+      - key: CLINIC_NAME
+        sync: false
+      - key: FISCAL_PROVIDER
+        value: focus
+      - key: FOCUS_ENV
+        value: homologation
+      - key: ALLOW_PRODUCTION_EMISSION
+        value: "false"
+      # Um por empresa (identificador em maiúsculas, hífen vira sublinhado), ex.:
+      # - key: FOCUS_TOKEN_HOMOLOGACAO_CLINICA_EXEMPLO
+      #   sync: false
+
+databases:
+  - name: clinica-fiscal-db
+    plan: basic-256mb
+    postgresMajorVersion: "17"

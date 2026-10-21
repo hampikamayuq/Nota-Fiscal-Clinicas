@@ -1,0 +1,5 @@
+# HTTPS automático para o domínio em FISCAL_HOST; tudo vai para a API (que serve a interface).
+{$FISCAL_HOST} {
+	encode gzip
+	reverse_proxy app:3100
+}

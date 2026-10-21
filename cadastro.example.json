@@ -1,0 +1,15 @@
+{
+  "_leia_me": "Modelo para empresas/cadastro.json: carga inicial opcional de profissionais, serviços e modelos de nota (npm run db:clinica). Só acrescenta o que falta; o que um ADMIN mudou pela interface fica. Tudo isto também se cadastra pela interface. Valores em reais.",
+  "profissionais": [
+    { "nome": "Dra. Exemplo Silva", "conselho": "CRM", "numero": "123456", "uf": "SP", "especialidade": "Dermatologia", "rqes": [{ "numero": "11111", "especialidade": "Dermatologia" }] },
+    { "nome": "Dr. Exemplo Souza", "conselho": "CRO", "numero": "98765", "uf": "SP", "especialidade": "Odontologia" }
+  ],
+  "servicos": [
+    { "nome": "Consulta", "valor": 400, "favorito": true, "categoria": "Consulta" },
+    { "nome": "Retorno", "descricao": "Consulta de retorno", "valor": 200 }
+  ],
+  "modelos": [
+    { "nome": "Consulta Dra. Exemplo", "favorito": true, "itens": [{ "servico": "Consulta", "valor": 450 }] },
+    { "nome": "Consulta + retorno", "itens": [{ "servico": "Consulta" }, { "servico": "Retorno" }] }
+  ]
+}

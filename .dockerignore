@@ -1,0 +1,15 @@
+# O que não entra na imagem: segredos, dependências do host e builds (a imagem gera os seus).
+.git
+node_modules
+web/node_modules
+web/dist
+dist
+src/generated
+.env
+.env.*
+!.env.example
+backups
+dados
+*.pfx
+*.p12
+.impeccable

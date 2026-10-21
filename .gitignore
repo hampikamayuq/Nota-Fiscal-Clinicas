@@ -1,0 +1,27 @@
+# Dependências e builds
+node_modules/
+web/node_modules/
+web/dist/
+dist/
+src/generated/
+*.tsbuildinfo
+*.log
+
+# Segredos e ambiente: nunca versionar (o exemplo, sim)
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+
+# Dados desta instalação: cada clínica guarda os seus (num fork privado, versione — CNPJ é público e a configuração fiscal precisa de histórico)
+empresas/*
+!empresas/LEIA-ME.md
+backups/
+dados/
+# Histórico da primeira instalação (nomes e dados reais): fica fora do repositório público
+docs/historico/
+
+# Sistema e ferramentas
+.DS_Store
+.impeccable/

@@ -1,0 +1,60 @@
+# Clínica Fiscal num VPS próprio, sem nada instalado antes: o Caddy faz o HTTPS
+# sozinho (Let's Encrypt) para FISCAL_HOST, que precisa apontar para o servidor.
+# Uso (no VPS, na pasta do projeto):
+#   docker compose -f deploy/docker-compose.vps.yml --env-file .env.production up -d --build
+# .env.production: COMPOSE_PROJECT_NAME, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB,
+# FISCAL_HOST e os do app (docs/deploy.md). Não mude os três primeiros depois do
+# primeiro `up`: outro nome = outro volume, vazio.
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?defina POSTGRES_USER em .env.production}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD em .env.production}
+      POSTGRES_DB: ${POSTGRES_DB:?defina POSTGRES_DB em .env.production}
+    volumes:
+      - db:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: ..
+    restart: unless-stopped
+    env_file: ../.env.production
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      API_COOKIE_SECURE: sim
+      API_TRUST_PROXY: "true"
+    volumes:
+      - ../empresas:/app/empresas:ro
+    labels:
+      br.com.clinica-fiscal.instalacao: ${COMPOSE_PROJECT_NAME:?defina COMPOSE_PROJECT_NAME em .env.production}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      FISCAL_HOST: ${FISCAL_HOST:?defina FISCAL_HOST em .env.production}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  db: {}
+  caddy_data: {}
+  caddy_config: {}

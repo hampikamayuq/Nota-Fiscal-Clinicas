@@ -1,0 +1,192 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/bricolage-grotesque";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Tema padrão do Clínica Fiscal, pensado para o balcão: bancada morna,
+ * superfícies brancas, grafite nas ações e linhas finas em taupe claro, plano
+ * por padrão. A nota, em papel blush, é a peça mais quente. Pílula só em ações;
+ * cartões em 16 px. Para a identidade da sua clínica, troque os tokens de
+ * :root abaixo (cores) e as fontes importadas no topo.
+ */
+@theme inline {
+  --font-heading: 'Bricolage Grotesque Variable', 'Geist Variable', sans-serif;
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-taupe: var(--taupe);
+  --color-taupe-deep: var(--taupe-deep);
+  --color-brand: var(--brand);
+  --color-blush: var(--blush);
+  --color-paper: var(--paper);
+  --color-status-draft: var(--status-draft);
+  --color-status-ready: var(--status-ready);
+  --color-status-processing: var(--status-processing);
+  --color-status-authorized: var(--status-authorized);
+  --color-status-rejected: var(--status-rejected);
+  --color-status-cancelled: var(--status-cancelled);
+  --color-sidebar: var(--sidebar);
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.625rem;
+  --radius-lg: var(--radius);
+  --radius-xl: 1rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1rem;
+  --radius-4xl: 999px;
+
+  /* Sombra ambiente do site: só em camadas que realmente flutuam (menus, diálogos). */
+  --shadow-md: 0 20px 55px rgb(64 64 65 / 0.08);
+  --shadow-lg: 0 20px 55px rgb(64 64 65 / 0.12);
+}
+
+:root {
+  /* Tokens da identidade — é aqui que a clínica personaliza as cores. Neutros
+   * puxados para o taupe; superfícies brancas sobre a bancada morna; a nota é o
+   * único papel blush. --brand colore o "Fiscal" da marca e os links de ação. */
+  --background: #fbf8f6;
+  --foreground: #29292a;
+  --card: #ffffff;
+  --card-foreground: #29292a;
+  --popover: #ffffff;
+  --popover-foreground: #29292a;
+  --primary: #404041;
+  --primary-foreground: #ffffff;
+  --secondary: #f3ede9;
+  --secondary-foreground: #29292a;
+  --muted: #f3ede9;
+  --muted-foreground: #6b5f59;
+  --accent: #fcefe8;
+  --accent-foreground: #29292a;
+  --destructive: #8a4b46;
+  --border: #e2d8d1;
+  --input: #a09087;
+  --ring: #735f56;
+  --taupe: #a28a7f;
+  --taupe-deep: #796960;
+  --brand: #735f56;
+  --blush: #fde6dc;
+  --paper: #fff1eb;
+  --status-draft: #6b5f59;
+  --status-ready: #404041;
+  --status-processing: #796960;
+  --status-authorized: #3f6b52;
+  --status-rejected: #8a4b46;
+  --status-cancelled: #6b5f59;
+  --radius: 0.75rem;
+  --sidebar: #f3ede9;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+  ::selection {
+    background: var(--blush);
+    color: var(--foreground);
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-heading font-medium text-foreground;
+    letter-spacing: -0.025em;
+    font-variation-settings: 'opsz' 96, 'wdth' 95;
+    text-wrap: balance;
+  }
+  /* Balcão e celular: nada tocável com menos de 44 px. */
+  @media (pointer: coarse) {
+    button,
+    [role='button'],
+    [role='radio'],
+    [role='tab'],
+    [data-slot='button'],
+    input:not([type='checkbox']):not([type='radio']),
+    textarea {
+      min-height: 44px;
+    }
+    [data-slot='button'][data-icon-only],
+    button[aria-label]:not([data-slot='checkbox']) {
+      min-width: 44px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Rótulo da marca: 0,75rem · 600 · 0,14em, no taupe profundo (≈6:1 sobre branco). */
+  .rotulo {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--brand);
+  }
+  /* Números de conferência (CPF, CNPJ, valores): mesma família, dígitos tabulares. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  /* A nota: o único papel quente. Plano, linha taupe, sem sombra. */
+  .folha {
+    background: var(--paper);
+    border: 1px solid color-mix(in oklab, var(--taupe) 55%, transparent);
+  }
+  .folha hr,
+  .folha .linha {
+    border-color: color-mix(in oklab, var(--taupe) 45%, transparent);
+  }
+  .carimbo {
+    font-family: var(--font-heading);
+    letter-spacing: 0.12em;
+    border: 1.5px solid currentColor;
+    transform: rotate(-4deg);
+  }
+  /* O carimbo pousa na folha quando a nota é emitida nesta sessão (só transform e opacity; reduced-motion zera acima). */
+  @keyframes pousar {
+    from {
+      transform: scale(1.25) rotate(-10deg);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1) rotate(-4deg);
+      opacity: 1;
+    }
+  }
+  .carimbo-pousa {
+    animation: pousar 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}

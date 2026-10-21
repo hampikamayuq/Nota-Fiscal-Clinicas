@@ -1,0 +1,18 @@
+{
+  "_leia_me": "Modelo para empresas/<slug>/config.json — uma pasta por empresa (CNPJ) da clínica. Confirme cada valor COM O CONTADOR antes de emitir. Este exemplo é uma clínica no Rio de Janeiro, Simples Nacional; os códigos municipais mudam de cidade para cidade.",
+  "cnpj": "00000000000000",
+  "razaoSocial": "CLINICA EXEMPLO LTDA",
+  "nomeFantasia": "Clínica Exemplo",
+  "codigoMunicipioEmissor": "3304557",
+  "opSimpNac": "3",
+  "regApTribSN": "1",
+  "regEspTrib": "0",
+  "codigoTributacaoNacional": "040101",
+  "codigoTributacaoMunicipal": "001",
+  "_codigos": "040101 = Medicina (LC 116, item 4.01). Outros da saúde: 040201 análises clínicas, 040301 hospitais/clínicas, 041201 odontologia, 041601 psicologia, 040801 fisioterapia, 041001 nutrição. O complemento municipal (codigoTributacaoMunicipal) só existe onde a prefeitura exige (o Rio exige; ver docs/rio-codigos-saude.md). O contador escolhe.",
+  "tributacaoIssqn": "1",
+  "retencaoIssqn": "1",
+  "aliquotaIss": 5,
+  "percentualTributosSimples": 6.0,
+  "codigoNbs": "123012100"
+}
