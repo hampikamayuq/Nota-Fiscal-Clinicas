@@ -12,6 +12,26 @@ Desde 01/01/2026 o Rio de Janeiro emite NFS-e só pelo padrão nacional
 ([`docs/rio.md`](./docs/rio.md)); outras cidades aderem no próprio ritmo.
 Confirme com o contador se a sua já está no padrão nacional.
 
+## Telas
+
+Dados fictícios: uma clínica odontológica de exemplo, emitindo pelo provedor de teste.
+
+| | |
+|---|---|
+| ![Início: faturamento do mês, notas para emitir e emitidas hoje](docs/screenshots/inicio.png) | ![Nova nota: empresa, paciente e profissional, com a nota se montando ao lado](docs/screenshots/nova-nota.png) |
+| **Início.** Faturamento do mês, o que falta emitir e o que já saiu hoje. | **Nova nota.** Empresa, paciente, profissional e serviços; a nota se monta ao lado. |
+| ![Nota emitida com dois serviços, conselho do profissional e histórico](docs/screenshots/nota-emitida.png) | ![Assistente de empresa, passo do código do serviço](docs/screenshots/assistente-servico.png) |
+| **Nota emitida.** PDF, WhatsApp, pagamento e histórico; o profissional sai com o próprio conselho (CRO-SP). | **Assistente de empresa.** Seis passos com tudo que a NFS-e precisa da emissora, explicado campo a campo. |
+| ![Revisão do assistente de empresa](docs/screenshots/assistente-revisao.png) | ![Relatórios por mês, empresa e forma de pagamento](docs/screenshots/relatorios.png) |
+| **Revisão.** O resumo antes de salvar, com o nome da variável do token da Focus. | **Relatórios.** Mês, empresa e forma de pagamento, com exportação em CSV. |
+
+<p align="center">
+  <img src="docs/screenshots/celular-inicio.png" width="260" alt="Início no celular">
+  <img src="docs/screenshots/celular-nota.png" width="260" alt="Nota emitida no celular">
+</p>
+
+Mais telas em [`docs/screenshots/`](./docs/screenshots/): login, notas, empresas e profissionais.
+
 ## O que a clínica personaliza
 
 | O quê | Onde | Quem |
